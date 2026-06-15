@@ -1,3 +1,4 @@
 .env
-/docs
-/db
+docs/
+db/
+*.sqlite3
