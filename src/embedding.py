@@ -1,9 +1,3 @@
-"""
-Este modulo contiene la clase 'Embedder', la cual se encargará de la creación 
-de los vectores de embedding a partir de un modelo pre-entrenado. Luego, 
-devuelve los vectores de embedding
-"""
-
 from langchain_chroma import Chroma
 from langchain_community.document_loaders import PyPDFDirectoryLoader
 from langchain_core.documents.base import Document
@@ -12,6 +6,11 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 
+"""
+Este modulo contiene la clase 'Embedder', la cual se encargará de la creación 
+de los vectores de embedding a partir de un modelo pre-entrenado. Luego, 
+devuelve los vectores de embedding
+"""
 class Embedder(object):
     
     def __init__(self, model_name: str, database_path: str, chunk_size: int = 500, chunk_overlap: int = 100):
@@ -24,10 +23,11 @@ class Embedder(object):
             print(f"Error loading model: {e}")
             raise e
         
-        self.model = __loaded_model
-        self.database_path = database_path
-        self.text_splitter = RecursiveCharacterTextSplitter(chunk_size = chunk_size, chunk_overlap = chunk_overlap)
-        self.vector_store = None
+        self.model: HuggingFaceEmbeddings = __loaded_model
+        self.database_path: str = database_path
+        self.text_splitter: RecursiveCharacterTextSplitter = \
+            RecursiveCharacterTextSplitter(chunk_size = chunk_size, chunk_overlap = chunk_overlap)
+        self.vector_store: Chroma = None
 
 
     def read_pdf_documents(self, documents_path: str) -> list[Document]:
@@ -36,6 +36,9 @@ class Embedder(object):
         loader = PyPDFDirectoryLoader(documents_path)    
         documents = loader.load()
 
+        if len(documents) == 0:
+            raise ValueError("No documents found in the specified path.")
+
         return self.__create_chunks(documents)
 
 
@@ -43,12 +46,17 @@ class Embedder(object):
         return self.text_splitter.split_documents(documents)
     
 
-    def embed_and_store(self, chunks: list[Document]) -> VectorStoreRetriever:
+    def embed_and_store(self, chunks: list[Document]) -> None:
         assert chunks is not None, "Chunks cannot be None"
 
         if self.vector_store is None: 
             self.vector_store = Chroma.from_documents(documents = chunks, embedding = self.model, persist_directory = self.database_path)
         else: 
             self.vector_store.add_documents(documents = chunks)
+    
 
-        return self.vector_store.as_retriever(search_type = "mmr", search_kwargs = {"k": 3})
+    def get_retriever(self, k: int = 3) -> VectorStoreRetriever:
+        if self.vector_store is None:
+            raise ValueError("Vector store has not been initialized. Please embed and store documents first.")
+        
+        return self.vector_store.as_retriever(search_type = "similarity", search_kwargs = {"k": k})

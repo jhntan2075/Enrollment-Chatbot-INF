@@ -1,0 +1,8 @@
+langchain
+langchain-classic
+langchain-community
+langchain-huggingface
+langchain-chroma
+langchain-ollama
+langchain-text-splitters
+langchain-core
