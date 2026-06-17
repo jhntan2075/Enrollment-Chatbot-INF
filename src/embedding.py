@@ -4,10 +4,10 @@ de los vectores de embedding a partir de un modelo pre-entrenado. Luego,
 devuelve los vectores de embedding
 """
 
-
 from langchain_chroma import Chroma
-from langchain_core import Document
 from langchain_community.document_loaders import PyPDFDirectoryLoader
+from langchain_core.documents.base import Document
+from langchain_core.vectorstores.base import VectorStoreRetriever
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
@@ -15,7 +15,6 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 class Embedder(object):
     
     def __init__(self, model_name: str, database_path: str, chunk_size: int = 500, chunk_overlap: int = 100):
-        
         assert model_name is not None, "Model name cannot be None"
         assert database_path is not None, "Database path cannot be None"
 
@@ -44,10 +43,12 @@ class Embedder(object):
         return self.text_splitter.split_documents(documents)
     
 
-    def embed_and_store(self, chunks: list[Document]):
+    def embed_and_store(self, chunks: list[Document]) -> VectorStoreRetriever:
         assert chunks is not None, "Chunks cannot be None"
 
-        if self.vector_store is None:
+        if self.vector_store is None: 
             self.vector_store = Chroma.from_documents(documents = chunks, embedding = self.model, persist_directory = self.database_path)
-        
-        self.vector_store.add_documents(documents = chunks)
+        else: 
+            self.vector_store.add_documents(documents = chunks)
+
+        return self.vector_store.as_retriever(search_type = "mmr", search_kwargs = {"k": 3})
