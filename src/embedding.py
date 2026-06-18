@@ -32,15 +32,6 @@ class Embedder(object):
         self.dynamic_db_name: str = dynamic_db_name
 
 
-    def _get_vector_store(self, collection_name: str) -> Chroma:
-        if collection_name not in [self.static_db_name, self.dynamic_db_name]:
-            raise ValueError(f"Collection name must be either '{self.static_db_name}' or '{self.dynamic_db_name}'")
-        
-        return Chroma(persist_directory = self.database_path, 
-                      embedding_function = self.model,
-                      collection_name = collection_name)
-
-
     def read_pdf_documents(self, documents_path: str) -> list[Document]:
         assert documents_path is not None, "Documents path cannot be None"
 
@@ -52,6 +43,7 @@ class Embedder(object):
 
         return self._create_chunks(documents)
     
+
     def read_csv_documents(self, documents_path: str) -> list[Document]:
         assert documents_path is not None, "Documents path cannot be None"
 
@@ -62,6 +54,16 @@ class Embedder(object):
             raise ValueError("No documents found in the specified path.")
         
         return self._create_chunks(documents)
+
+
+    def _get_vector_store(self, collection_name: str) -> Chroma:
+        if collection_name not in [self.static_db_name, self.dynamic_db_name]:
+            raise ValueError(f"Collection name must be either '{self.static_db_name}' or '{self.dynamic_db_name}'")
+        
+        return Chroma(persist_directory = self.database_path, 
+                      embedding_function = self.model,
+                      collection_name = collection_name)
+
 
     def read_message_from_discord(self, message: dict) -> list[Document]:
         assert message is not None, "Message cannot be None"
@@ -82,6 +84,7 @@ class Embedder(object):
         doc = Document(page_content = page_content, metadata = metadata)
 
         return self._create_chunks([doc])
+
 
     def _create_chunks(self, documents: list[Document]) -> list[Document]:
         return self.text_splitter.split_documents(documents)
